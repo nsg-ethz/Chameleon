@@ -1,0 +1,7 @@
+/target
+*.pdf
+Cargo.lock
+/*_naive.json
+/*_atomic.json
+results/*
+

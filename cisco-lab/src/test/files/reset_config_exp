@@ -1,0 +1,56 @@
+no ip route 1.0.0.0/8 Null0
+no route-map neighbor-R0_ext_5-in permit 32868
+no route-map neighbor-R0_ext_5-in permit 65535
+no route-map neighbor-R0_ext_5-out permit 65535
+no route-map neighbor-R2-in permit 65535
+no route-map neighbor-R2-out permit 65535
+interface Ethernet4/1
+no mac-address dead.006f.0401
+no ip address 1.128.0.1/30
+no ip ospf cost 10
+no ip router ospf 10 area 0.0.0.0
+shutdown
+exit
+interface Ethernet4/2
+no mac-address dead.006f.0402
+no ip address 1.128.0.5/30
+no ip ospf cost 10
+no ip router ospf 10 area 0.0.0.0
+shutdown
+exit
+interface Ethernet4/3
+no mac-address dead.006f.0403
+no ip address 1.128.0.9/30
+no ip ospf cost 10
+no ip router ospf 10 area 0.0.0.0
+shutdown
+exit
+interface Ethernet4/4
+no mac-address dead.006f.0404
+no ip address 1.128.0.13/30
+no ip ospf cost 10
+no ip router ospf 10 area 0.0.0.0
+shutdown
+exit
+interface Ethernet4/5
+no mac-address dead.006f.0405
+no ip address 1.192.0.1/30
+no ip ospf cost 1
+no ip router ospf 10 area 0.0.0.0
+shutdown
+exit
+interface loopback0
+no ip address 1.0.0.1/32
+no ip ospf cost 1
+no ip router ospf 10 area 0.0.0.0
+exit
+router ospf 10
+no router-id 1.0.0.1
+no maximum-paths 1
+exit
+router bgp 65535
+no router-id 1.0.0.1
+no address-family ipv4 unicast
+no neighbor 1.0.1.1 remote-as 65535
+no neighbor 1.192.0.2 remote-as 5
+exit

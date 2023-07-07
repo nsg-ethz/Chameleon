@@ -1,0 +1,16 @@
+vdcs = [
+  "lab-vdc111",
+  "lab-vdc112",
+  "lab-vdc113",
+  "lab-vdc114",
+  "lab-vdc121",
+  "lab-vdc122",
+  "lab-vdc123",
+  "lab-vdc124",
+]
+
+routers = [
+  "lab-router1",
+  "lab-router2",
+  "lab-router3",
+]

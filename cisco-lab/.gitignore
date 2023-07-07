@@ -1,0 +1,8 @@
+config/*
+!config/labsetup
+!config/generate_interfaces.sh
+!config/routers.toml
+!config/config.toml
+!config/tofino_controller.py
+
+example_data/*

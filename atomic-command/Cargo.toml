@@ -1,0 +1,14 @@
+[package]
+name = "atomic-command"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+serde = ["dep:serde"]
+
+[dependencies]
+bgpsim = { path = "../bgpsim" }
+serde = { version = "1", features = [ "derive" ], optional = true }
+itertools = "0.10.3"

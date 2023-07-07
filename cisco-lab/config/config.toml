@@ -1,0 +1,115 @@
+# The content of this file has been cleaned for privacy reasons.
+
+[server]
+# SSH Hostname to reach the server.
+#
+# Make sure that the SSH configuration allows connecting to that server
+# without any passowrd.
+ssh_name = ""
+
+# Filename for the netplan configuration file, to configure ExaBGP interfaces.
+#
+# **Warning** Make sure that regular users can write this file!
+netplan_config_filename = ""
+
+# Interface name which is used by ExaBGP
+exabgp_iface = ""
+
+# Filename for the ExaBGP runner script on the server
+exabgp_runner_filename = ""
+
+# Filename for the ExaBGP configuration on the server.
+exabgp_config_filename = ""
+
+# Filename of the textfile to interact with the ExaBGP runner script on the
+# server
+exabgp_runner_control_filename = ""
+
+# Filename for the configuration file of the prober on the server.
+prober_config_filename = ""
+
+# Interface name used to generate traffic on (using the prober).
+prober_iface = ""
+
+# The port on the tofino to which the delayer interface is connected
+delayer_tofino_ports = []
+
+# Offset of delay values to account for the extra time of passing through the delayer loop
+delayer_loop_offset = 0
+
+# The IP where the iperf client will be started to generate traffic, e.g. with:
+# iperf3 --bind 192.33.88.222 --udp --bitrate 1G --time 0 --client 192.33.88.221
+# Make sure that the there is an interface configured on the connected server that matches this IP.
+iperf_client_ip = ""
+
+# The port on the tofino to which the iperf client interface is connected
+iperf_client_tofino_port = 0
+
+# The IP where the iperf server is running, e.g. with:
+# iperf3 --server --bind 192.33.88.221 --daemon
+iperf_server_ip = ""
+
+# The port on the tofino to which the iperf server interface is connected
+iperf_server_tofino_port = 0
+
+# The fake iperf source IP address used to replicate traffic to the routers, used to filter out traffic that returns to the Tofino
+iperf_filter_src_ip = ""
+
+# Set to true to enable the full traffic monitoring, can be true/false
+traffic_monitor_enable = false
+
+# Path on the server where to place the recorded pcap files
+traffic_monitor_pcap_path = ""
+
+# The server interface on which the full traffic will be monitored, should be connected to traffic_monitor_tofino_port
+traffic_monitor_iface = ""
+
+# The port on the tofino to which the full traffic should be cloned, should be connected to traffic_monitor_iface
+traffic_monitor_tofino_port = 0
+
+[tofino]
+# SSH Hostname to reach the tofino.
+#
+# Make sure that the SSH configuration allows connecting to that server
+# without any passowrd.
+ssh_name = ""
+
+# Filename for storing the controller script.
+controller_filename = ""
+
+# Path towards the port setup file
+ports_setup_filename = ""
+
+# Path towards the file used to disable or enable specific ports
+ucli_script_filename = ""
+
+# Path towards the Barefoot SDE. This is to be sourced before executing `run_bfshell.sh`
+bf_sde_path = ""
+
+# Full path for the Barefoot SDE shell.
+bf_sde_shell = ""
+
+[addresses]
+# IP Address range used for all internal networks and all links, both
+# connecting two internal routers and connecting an internal and an external
+# router.
+internal_ip_range = "1.0.0.0/8"
+
+# IP Address range for networks of external routers.
+external_ip_range = "2.0.0.0/8"
+
+# IP Address range for announced prefixes.
+prefix_ip_range = "3.0.0.0/8"
+
+# Prefix length for networks that are assigned to internal routers.
+local_prefix_len = 24
+
+# Prefix length of links (connecting an internal router with either an
+# external or another internal router).
+link_prefix_len = 30
+
+# Prefix length for networks that are assigned to external routers.
+external_prefix_len = 24
+
+# Prefix length of announced prefixes.
+prefix_len = 24

@@ -1,0 +1,83 @@
+[package]
+name = "chameleon"
+version = "0.6.1"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+# Explicitly disallow loops
+explicit-loop-checker = []
+# disable CBC output
+hide-cbc-output = []
+# enable serialization
+serde = ["dep:serde", "dep:serde_json", "atomic-command/serde", "time?/serde"]
+# Create a test migration and export it for netwim-web
+export-web = ["serde"]
+# Structures for running experiments
+experiment = ["serde", "dep:time"]
+# enable random queues in bgpsim
+rand-queue = ["bgpsim/rand_queue"]
+# Run the main program in the real-world test-lab
+cisco-lab = ["dep:cisco-lab", "dep:tokio", "dep:time"]
+# Add a global lock around the CBC solve methods to only have one instance of cbc running simultaneously.
+singlethread-cbc = ["good_lp/singlethread-cbc"]
+# solve each model with as many cores as available.
+# This option will use at most 8 cores in cbc (as we hit diminishing returns quickly).
+cbc-parallel = []
+
+# default features
+default = ["singlethread-cbc"]
+
+[[example]]
+name = "paper-example"
+path = "examples/paper_example.rs"
+required-features = ["experiment", "cisco-lab", "export-web"]
+
+[[bin]]
+name = "main"
+path = "src/main.rs"
+required-features = ["experiment", "cisco-lab", "export-web"]
+
+[[bin]]
+name = "eval-overhead"
+path = "src/eval_overhead.rs"
+required-features = ["experiment", "hide-cbc-output"]
+
+[[bin]]
+name = "eval-scheduler"
+path = "src/eval_scheduler.rs"
+required-features = ["experiment", "hide-cbc-output"]
+
+[[bin]]
+name = "eval-violation"
+path = "src/eval_violation.rs"
+required-features = ["experiment", "rand-queue"]
+
+[dependencies]
+atomic-command = { path = "atomic-command" }
+bgpsim = { path = "bgpsim", features = [ "rand", "topology_zoo" ] }
+cisco-lab = { path = "cisco-lab", optional = true }
+thiserror = "1.0.32"
+itertools = "0.10.3"
+petgraph = "0.6.2"
+good_lp = { git = "https://github.com/tiborschneider/good_lp", default-features = false, features = ["coin_cbc"] }
+rand = "0.8.5"
+pretty_assertions_sorted = "1.2.1"
+ipnet = "2.5.0"
+log = "0.4.17"
+pretty_env_logger = "0.4.0"
+net-parser-rs = "0.3.0"
+serde = { version = "1", features = [ "derive" ], optional = true }
+serde_json = { version = "1", optional = true }
+maplit = "1.0.2"
+tokio = { version = "1.21.2", features = ["rt-multi-thread"], optional = true }
+time = { version = "0.3.17", features = ["formatting", "local-offset", "std"], optional = true }
+clap = { version = "4.0.32", features = ["derive", "string"] }
+lazy_static = "1.4.0"
+num_cpus = "1.15.0"
+rayon = "1.6.1"
+boolinator = "2.4.0"
+
+[dev-dependencies]
+env_logger = "0.9.3"
+test-log = "0.2.11"

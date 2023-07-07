@@ -1,0 +1,61 @@
+BGP routing table information for VRF default, address family IPv4 Unicast
+BGP routing table entry for 1.0.0.0/8, version 161
+Paths: (4 available, best #4)
+Flags: (0x080002) (high32 00000000) on xmit-list, is not in urib
+
+  Path type: internal, path is valid, not best reason: NH metric, no labeled nexthop
+  AS-Path: NONE, path sourced internal to AS
+    1.0.2.1 (metric 105) from 1.0.2.1 (1.0.2.1)
+      Origin IGP, MED not set, localpref 100, weight 100
+
+  Path type: internal, path is valid, not best reason: NH metric, no labeled nexthop
+  AS-Path: NONE, path sourced internal to AS
+    1.0.1.1 (metric 182) from 1.0.1.1 (1.0.1.1)
+      Origin IGP, MED not set, localpref 100, weight 100
+
+  Path type: internal, path is valid, not best reason: Weight, no labeled nexthop
+  AS-Path: NONE, path sourced internal to AS
+    1.0.3.1 (metric 60) from 1.0.3.1 (1.0.3.1)
+      Origin IGP, MED not set, localpref 100, weight 100
+
+  Advertised path-id 1
+  Path type: local, path is valid, is best path, no labeled nexthop
+  AS-Path: NONE, path locally originated
+    0.0.0.0 (metric 0) from 0.0.0.0 (1.0.5.1)
+      Origin IGP, MED not set, localpref 100, weight 32768
+
+  Path-id 1 advertised to peers:
+    1.0.1.1            1.0.2.1            1.0.3.1            1.192.0.6
+BGP routing table entry for 3.0.0.0/24, version 163
+Paths: (4 available, best #4)
+Flags: (0x08001a) (high32 00000000) on xmit-list, is in urib, is best urib route, is in HW
+
+  Path type: external, path is valid, not best reason: Weight, no labeled nexthop
+  AS-Path: 12 12 101 , path sourced external to AS
+    1.192.0.6 (metric 0) from 1.192.0.6 (2.0.1.1)
+      Origin IGP, MED 200, localpref 100, weight 100
+      Community: 65535:20 65535:10003
+
+  Path type: internal, path is invalid(deleted/dampened/history), is deleted, no labeled nexthop
+  AS-Path: 11 101 , path sourced external to AS
+    1.0.3.1 (metric 60) from 1.0.2.1 (1.0.2.1)
+      Origin IGP, MED not set, localpref 100, weight 100
+      Community: 65535:10001
+      Originator: 1.0.3.1 Cluster list: 1.0.2.1
+
+  Path type: internal, path is valid, not best reason: Weight, no labeled nexthop
+  AS-Path: 11 101 , path sourced external to AS
+    1.0.3.1 (metric 60) from 1.0.1.1 (1.0.1.1)
+      Origin IGP, MED not set, localpref 100, weight 100
+      Community: 65535:10001
+      Originator: 1.0.3.1 Cluster list: 1.0.1.1
+
+  Advertised path-id 1
+  Path type: internal, path is valid, is best path, no labeled nexthop, in rib
+  AS-Path: 11 101 , path sourced external to AS
+    1.0.3.1 (metric 60) from 1.0.3.1 (1.0.3.1)
+      Origin IGP, MED not set, localpref 100, weight 200
+      Community: 65535:10001
+
+  Path-id 1 advertised to peers:
+    1.192.0.6

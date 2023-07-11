@@ -40,15 +40,7 @@ def running_time(data):
     try:
         schedule = next(iter(data["decomp"]["schedule"].values()))
         num_rounds = max(s["new_route"] for s in schedule.values())
-        steps = 2 + sum(
-            2
-            if any(
-                s["old_route"] + 1 == k and s["new_route"] == k
-                for s in schedule.values()
-            )
-            else 1
-            for k in range(num_rounds)
-        )
+        steps = 2 + num_rounds
     except TypeError:
         steps = 2 + data["data"]["model_steps"]
     return steps * 12
@@ -96,7 +88,6 @@ def get_stats(file):
         data = json.load(fp)
 
     steps = float("inf")
-    slow_steps = float("inf")
     mem_baseline = float("inf")
     mem_sitn = float("inf")
     mem = float("inf")
@@ -117,7 +108,6 @@ def get_stats(file):
         steps = int(r["steps"])
         cost = int(r["cost"])
         if result == "Success":
-            slow_steps = int(r["slow_steps"])
             mem_baseline = int(r["max_routes_baseline"])
             mem_sitn = int(r["routes_before"] + r["routes_after"])
             mem = int(r["max_routes"])

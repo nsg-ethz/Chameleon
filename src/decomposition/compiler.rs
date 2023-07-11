@@ -110,10 +110,13 @@ fn _build<Q>(
 
 /// order for applying route preferences.
 const TEMP_SESSION_ORDER: i16 = i16::MAX;
-/// weight for applying route preferences.
-const TEMP_SESSION_WEIGHT: u32 = u16::MAX as u32 - 1;
-/// weight for preferred routes
-const PREF_WEIGHT: u32 = u16::MAX as u32 - 2;
+
+/// Weight for the old route
+const OLD_ROUTE_WEIGHT: u32 = 1000; // u16::MAX as u32 - 3;
+/// Weight for the temporary route
+const TMP_ROUTE_WEIGHT: u32 = 2000; // u16::MAX as u32 - 2;
+/// Weight for the new route.
+const NEW_ROUTE_WEIGHT: u32 = 3000; // u16::MAX as u32 - 1;
 
 /// Get the order for modifying temporary bgp sessions (outgoing route-maps to specifically allow
 /// routes)
@@ -138,7 +141,7 @@ fn pref_order(prefix: P) -> i16 {
 }
 
 /// Get the config expr to prefer a specific route.
-fn prefer_route(router: RouterId, neighbor: RouterId, prefix: P) -> ConfigExpr<P> {
+fn prefer_route(router: RouterId, neighbor: RouterId, prefix: P, weight: u32) -> ConfigExpr<P> {
     ConfigExpr::BgpRouteMap {
         router,
         neighbor,
@@ -147,7 +150,7 @@ fn prefer_route(router: RouterId, neighbor: RouterId, prefix: P) -> ConfigExpr<P
             .allow()
             .order_sgn(pref_order(prefix))
             .match_prefix(prefix)
-            .set_weight(PREF_WEIGHT)
+            .set_weight(weight)
             .build(),
     }
 }
@@ -166,7 +169,7 @@ fn use_temp_session(router: RouterId, egress: RouterId, prefix: P) -> AtomicModi
                 .allow()
                 .order_sgn(temp_session_order(prefix))
                 .match_prefix(prefix)
-                .set_weight(TEMP_SESSION_WEIGHT)
+                .set_weight(TMP_ROUTE_WEIGHT)
                 .exit()
                 .build(),
         }),
@@ -187,7 +190,7 @@ fn ignore_temp_session(router: RouterId, egress: RouterId, prefix: P) -> AtomicM
                 .allow()
                 .order_sgn(temp_session_order(prefix))
                 .match_prefix(prefix)
-                .set_weight(TEMP_SESSION_WEIGHT)
+                .set_weight(TMP_ROUTE_WEIGHT)
                 .exit()
                 .build(),
         }),
@@ -284,14 +287,14 @@ fn setup_commands<Q>(
                         router: *r,
                         prefix: *p,
                         neighbor: n,
-                        raw: vec![Insert(prefer_route(*r, n, *p))],
+                        raw: vec![Insert(prefer_route(*r, n, *p, OLD_ROUTE_WEIGHT))],
                     },
                     precondition: AtomicCondition::None,
                     postcondition: AtomicCondition::SelectedRoute {
                         router: *r,
                         prefix: *p,
                         neighbor: Some(n),
-                        weight: Some(PREF_WEIGHT),
+                        weight: Some(OLD_ROUTE_WEIGHT),
                         next_hop: old_nh(info, *r, *p),
                     },
                 })
@@ -437,8 +440,11 @@ fn atomic_commands_for_prefix<Q>(
 
     // build the stage according to our rules
     for (r, s) in schedules {
+        // first, make r select the new route at r_new (that's common in all phases)
+        prefer_new_route_in_r_new(&mut stage, *r, info, schedules, bgp_deps, prefix);
+        // then, check which rule applies
         if s.old_route == s.fw_state && s.fw_state == s.new_route {
-            apply_rule_1(&mut stage, *r, info, schedules, bgp_deps, prefix)
+            // nothing to do!
         } else if s.old_route < s.fw_state && s.fw_state == s.new_route {
             apply_rule_2(&mut stage, *r, info, schedules, bgp_deps, prefix)
         } else if s.old_route == s.fw_state && s.fw_state < s.new_route {
@@ -457,8 +463,10 @@ fn atomic_commands_for_prefix<Q>(
     Ok((stage, stage_after))
 }
 
-/// Compilation rule when `r_old == r_fw == r_new`
-fn apply_rule_1<Q>(
+/// Add the commands to prefer the new route in r_new.
+///
+/// This command is the same for all four rules.
+fn prefer_new_route_in_r_new<Q>(
     stage: &mut Stage,
     router: RouterId,
     info: &CommandInfo<'_, Q>,
@@ -467,54 +475,35 @@ fn apply_rule_1<Q>(
     prefix: P,
 ) {
     let s = schedules.get(&router).unwrap();
-    let old_n = old_neighbor(router, info, schedules, bgp_deps, prefix);
-    let new_n = new_neighbor(router, info, schedules, bgp_deps, prefix);
-    let precondition = AtomicCondition::AvailableRoute {
-        router,
-        prefix,
-        neighbor: new_n,
-        weight: None,
-        next_hop: new_nh(info, router, prefix),
-    };
-    let postcondition = AtomicCondition::SelectedRoute {
-        router,
-        prefix,
-        neighbor: new_n,
-        weight: Some(PREF_WEIGHT),
-        next_hop: new_nh(info, router, prefix),
-    };
+    let old_n = old_neighbor(router, info, schedules, bgp_deps, prefix).expect("TODO");
+    let new_n = new_neighbor(router, info, schedules, bgp_deps, prefix).expect("TODO");
+    let new_egress = new_nh(info, router, prefix);
     // changing the preference must be done in any case:
-    match (old_n, new_n) {
-        (Some(old_n), Some(new_n)) if old_n != new_n => stage[s.fw_state].push(AtomicCommand {
-            command: AtomicModifier::ChangePreference {
-                router,
-                prefix,
-                neighbor: new_n,
-                raw: vec![
-                    Remove(prefer_route(router, old_n, prefix)),
-                    Insert(prefer_route(router, new_n, prefix)),
-                ],
-            },
-            precondition,
-            postcondition,
-        }),
-        // Change from the old route to a black hole.
-        // TODO: This must still be implemented, as we would introduce a static route to drop
-        // packets.
-        (Some(_old_n), None) => todo!("no new neighbor: {:?}", bgp_deps.get(&router)),
-        // Change from a black hole to a new route
-        (None, Some(new_n)) => stage[s.fw_state].push(AtomicCommand {
-            command: AtomicModifier::ChangePreference {
-                router,
-                prefix,
-                neighbor: new_n,
-                raw: vec![Insert(prefer_route(router, new_n, prefix))],
-            },
-            precondition,
-            postcondition,
-        }),
-        _ => {}
-    };
+    stage[s.new_route].push(AtomicCommand {
+        command: AtomicModifier::ChangePreference {
+            router,
+            prefix,
+            neighbor: new_n,
+            raw: vec![
+                Remove(prefer_route(router, old_n, prefix, OLD_ROUTE_WEIGHT)),
+                Insert(prefer_route(router, new_n, prefix, NEW_ROUTE_WEIGHT)),
+            ],
+        },
+        precondition: AtomicCondition::AvailableRoute {
+            router,
+            prefix,
+            neighbor: Some(new_n),
+            weight: None,
+            next_hop: new_egress,
+        },
+        postcondition: AtomicCondition::SelectedRoute {
+            router,
+            prefix,
+            neighbor: Some(new_n),
+            weight: Some(NEW_ROUTE_WEIGHT),
+            next_hop: new_egress,
+        },
+    });
 }
 
 /// Compilation rule when `r_old < r_fw == r_new`.
@@ -527,15 +516,9 @@ fn apply_rule_2<Q>(
     prefix: P,
 ) {
     let s = schedules.get(&router).unwrap();
-    let old_n = old_neighbor(router, info, schedules, bgp_deps, prefix).unwrap();
     let new_n = new_neighbor(router, info, schedules, bgp_deps, prefix).unwrap();
-    let old_egress = info
-        .bgp_before
-        .get(&prefix)
-        .unwrap()
-        .ingress_session(router)
-        .unwrap()
-        .1;
+    let old_egress = old_nh(info, router, prefix).unwrap();
+    let new_egress = new_nh(info, router, prefix).unwrap();
 
     // In round r_old, use the temporary session by making the old egress advertise its route over
     // the temporary session.
@@ -546,51 +529,23 @@ fn apply_rule_2<Q>(
             router,
             prefix,
             neighbor: Some(old_egress),
-            weight: Some(TEMP_SESSION_WEIGHT),
+            weight: Some(TMP_ROUTE_WEIGHT),
             next_hop: Some(old_egress),
         },
-    });
-
-    // After selecting the route from the temp session, push the change in routing decision. Leave
-    // the postcondition empty, as this route will only be picked in the r_fw.
-    stage[s.old_route].push(AtomicCommand {
-        command: AtomicModifier::ChangePreference {
-            router,
-            prefix,
-            neighbor: new_n,
-            raw: vec![
-                Remove(prefer_route(router, old_n, prefix)),
-                Insert(prefer_route(router, new_n, prefix)),
-            ],
-        },
-        precondition: AtomicCondition::SelectedRoute {
-            router,
-            prefix,
-            neighbor: Some(old_egress),
-            weight: Some(TEMP_SESSION_WEIGHT),
-            next_hop: Some(old_egress),
-        },
-        postcondition: AtomicCondition::None,
     });
 
     // in r_fw, remove the temporary bgp session, but only when the new route with increased weight
     // is present (that was changed in fw_old)
     stage[s.fw_state].push(AtomicCommand {
         command: ignore_temp_session(router, old_egress, prefix),
-        precondition: AtomicCondition::AvailableRoute {
+        precondition: AtomicCondition::SelectedRoute {
             router,
             prefix,
             neighbor: Some(new_n),
-            weight: Some(PREF_WEIGHT),
-            next_hop: new_nh(info, router, prefix),
+            weight: Some(NEW_ROUTE_WEIGHT),
+            next_hop: Some(new_egress),
         },
-        postcondition: AtomicCondition::SelectedRoute {
-            router,
-            prefix,
-            neighbor: Some(new_n),
-            weight: Some(PREF_WEIGHT),
-            next_hop: new_nh(info, router, prefix),
-        },
+        postcondition: AtomicCondition::None,
     });
 }
 
@@ -604,15 +559,8 @@ fn apply_rule_3<Q>(
     prefix: P,
 ) {
     let s = schedules.get(&router).unwrap();
-    let old_n = old_neighbor(router, info, schedules, bgp_deps, prefix).unwrap();
     let new_n = new_neighbor(router, info, schedules, bgp_deps, prefix).unwrap();
-    let new_egress = info
-        .bgp_after
-        .get(&prefix)
-        .unwrap()
-        .ingress_session(router)
-        .unwrap()
-        .1;
+    let new_egress = new_nh(info, router, prefix).unwrap();
 
     // In round r_fw, use the temporary bgp session.
     stage[s.fw_state].push(AtomicCommand {
@@ -622,51 +570,22 @@ fn apply_rule_3<Q>(
             router,
             prefix,
             neighbor: Some(new_egress),
-            weight: Some(TEMP_SESSION_WEIGHT),
+            weight: Some(TMP_ROUTE_WEIGHT),
             next_hop: Some(new_egress),
         },
     });
 
-    // after using the temporary session, at r_fw, push the change in routing decision. Leave the
-    // postcondition empty, as the new route will only be selected in r_new.
-    stage[s.fw_state].push(AtomicCommand {
-        command: AtomicModifier::ChangePreference {
-            router,
-            prefix,
-            neighbor: new_n,
-            raw: vec![
-                Remove(prefer_route(router, old_n, prefix)),
-                Insert(prefer_route(router, new_n, prefix)),
-            ],
-        },
+    // in r_new, also remove the temporary bgp session (after the new route was selected).
+    stage[s.new_route].push(AtomicCommand {
+        command: ignore_temp_session(router, new_egress, prefix),
         precondition: AtomicCondition::SelectedRoute {
             router,
             prefix,
-            neighbor: Some(new_egress),
-            weight: Some(TEMP_SESSION_WEIGHT),
+            neighbor: Some(new_n),
+            weight: Some(NEW_ROUTE_WEIGHT),
             next_hop: Some(new_egress),
         },
         postcondition: AtomicCondition::None,
-    });
-
-    // in r_new, also remove the temporary bgp session, but only when the new route has an increased
-    // weight. Then, check that the new route is selected.
-    stage[s.new_route].push(AtomicCommand {
-        command: ignore_temp_session(router, new_egress, prefix),
-        precondition: AtomicCondition::AvailableRoute {
-            router,
-            prefix,
-            neighbor: Some(new_n),
-            weight: Some(PREF_WEIGHT),
-            next_hop: new_nh(info, router, prefix),
-        },
-        postcondition: AtomicCondition::SelectedRoute {
-            router,
-            prefix,
-            neighbor: Some(new_n),
-            weight: Some(PREF_WEIGHT),
-            next_hop: new_nh(info, router, prefix),
-        },
     });
 }
 
@@ -679,28 +598,15 @@ fn apply_rule_4<Q>(
     bgp_deps: &BgpDependencies,
     prefix: P,
 ) {
-    let old_egress = info
-        .bgp_before
-        .get(&prefix)
-        .unwrap()
-        .ingress_session(router)
-        .unwrap()
-        .1;
-    let new_egress = info
-        .bgp_after
-        .get(&prefix)
-        .unwrap()
-        .ingress_session(router)
-        .unwrap()
-        .1;
-
+    let old_egress = old_nh(info, router, prefix).unwrap();
+    let new_egress = new_nh(info, router, prefix).unwrap();
     if old_egress == new_egress {
         return apply_rule_4_same_egress(stage, router, info, schedules, bgp_deps, prefix);
     }
 
     let s = schedules.get(&router).unwrap();
-    let old_n = old_neighbor(router, info, schedules, bgp_deps, prefix).unwrap();
     let new_n = new_neighbor(router, info, schedules, bgp_deps, prefix).unwrap();
+
     // In round r_old, use the old egress via the temporary bgp session
     stage[s.old_route].push(AtomicCommand {
         command: use_temp_session(router, old_egress, prefix),
@@ -709,30 +615,9 @@ fn apply_rule_4<Q>(
             router,
             prefix,
             neighbor: Some(old_egress),
-            weight: Some(TEMP_SESSION_WEIGHT),
+            weight: Some(TMP_ROUTE_WEIGHT),
             next_hop: Some(old_egress),
         },
-    });
-
-    // Also, at r_old, after selecting the temporary session, already prefer the new route.
-    stage[s.old_route].push(AtomicCommand {
-        command: AtomicModifier::ChangePreference {
-            router,
-            prefix,
-            neighbor: new_n,
-            raw: vec![
-                Remove(prefer_route(router, old_n, prefix)),
-                Insert(prefer_route(router, new_n, prefix)),
-            ],
-        },
-        precondition: AtomicCondition::SelectedRoute {
-            router,
-            prefix,
-            neighbor: Some(old_egress),
-            weight: Some(TEMP_SESSION_WEIGHT),
-            next_hop: Some(old_egress),
-        },
-        postcondition: AtomicCondition::None,
     });
 
     // then, at r_fw, switch over to the new temporary bgp session. For that, first use the
@@ -741,11 +626,11 @@ fn apply_rule_4<Q>(
     stage[s.fw_state].push(AtomicCommand {
         command: use_temp_session(router, new_egress, prefix),
         precondition: AtomicCondition::None,
-        postcondition: AtomicCondition::SelectedRoute {
+        postcondition: AtomicCondition::AvailableRoute {
             router,
             prefix,
             neighbor: Some(new_egress),
-            weight: Some(TEMP_SESSION_WEIGHT),
+            weight: Some(TMP_ROUTE_WEIGHT),
             next_hop: Some(new_egress),
         },
     });
@@ -755,40 +640,33 @@ fn apply_rule_4<Q>(
             router,
             prefix,
             neighbor: Some(new_egress),
-            weight: Some(TEMP_SESSION_WEIGHT),
+            weight: Some(TMP_ROUTE_WEIGHT),
             next_hop: Some(new_egress),
         },
-        postcondition: AtomicCondition::SelectedRoute {
+        postcondition: AtomicCondition::AvailableRoute {
             router,
             prefix,
             neighbor: Some(new_egress),
-            weight: Some(TEMP_SESSION_WEIGHT),
+            weight: Some(TMP_ROUTE_WEIGHT),
             next_hop: Some(new_egress),
         },
     });
 
-    // in r_fw, also remove the temporary bgp session, but only when the new route has an increased
-    // weight. Then, check that the new route is selected.
+    // Finally, after the new route was selected, ignore the temporary session.
     stage[s.new_route].push(AtomicCommand {
         command: ignore_temp_session(router, new_egress, prefix),
-        precondition: AtomicCondition::AvailableRoute {
+        precondition: AtomicCondition::SelectedRoute {
             router,
             prefix,
             neighbor: Some(new_n),
-            weight: Some(PREF_WEIGHT),
-            next_hop: new_nh(info, router, prefix),
+            weight: Some(NEW_ROUTE_WEIGHT),
+            next_hop: Some(new_egress),
         },
-        postcondition: AtomicCondition::SelectedRoute {
-            router,
-            prefix,
-            neighbor: Some(new_n),
-            weight: Some(PREF_WEIGHT),
-            next_hop: new_nh(info, router, prefix),
-        },
+        postcondition: AtomicCondition::None,
     });
 }
 
-/// Compilation rule when `r_old < r_fw < r_new`
+/// Compilation rule when `r_old < r_fw < r_new`, but when the egress is the same.
 fn apply_rule_4_same_egress<Q>(
     stage: &mut Stage,
     router: RouterId,
@@ -798,15 +676,8 @@ fn apply_rule_4_same_egress<Q>(
     prefix: P,
 ) {
     let s = schedules.get(&router).unwrap();
-    let old_n = old_neighbor(router, info, schedules, bgp_deps, prefix).unwrap();
     let new_n = new_neighbor(router, info, schedules, bgp_deps, prefix).unwrap();
-    let egress = info
-        .bgp_after
-        .get(&prefix)
-        .unwrap()
-        .ingress_session(router)
-        .unwrap()
-        .1;
+    let egress = old_nh(info, router, prefix).unwrap();
 
     // In round r_old, use the egress via temporary bgp session
     stage[s.old_route].push(AtomicCommand {
@@ -816,52 +687,25 @@ fn apply_rule_4_same_egress<Q>(
             router,
             prefix,
             neighbor: Some(egress),
-            weight: Some(TEMP_SESSION_WEIGHT),
+            weight: Some(TMP_ROUTE_WEIGHT),
             next_hop: Some(egress),
         },
-    });
-
-    // Further, at r_old, change the preference which should only take affect in r_new.
-    stage[s.old_route].push(AtomicCommand {
-        command: AtomicModifier::ChangePreference {
-            router,
-            prefix,
-            neighbor: new_n,
-            raw: vec![
-                Remove(prefer_route(router, old_n, prefix)),
-                Insert(prefer_route(router, new_n, prefix)),
-            ],
-        },
-        precondition: AtomicCondition::SelectedRoute {
-            router,
-            prefix,
-            neighbor: Some(egress),
-            weight: Some(TEMP_SESSION_WEIGHT),
-            next_hop: Some(egress),
-        },
-        postcondition: AtomicCondition::None,
     });
 
     // then, at r_fw, do nothing.
 
-    // in r_fw, also remove the temporary bgp session, but only when the new route has an increased
+    // in r_new, also remove the temporary bgp session, but only when the new route has an increased
     // weight. Then, check that the new route is selected.
     stage[s.new_route].push(AtomicCommand {
         command: ignore_temp_session(router, egress, prefix),
-        precondition: AtomicCondition::AvailableRoute {
+        precondition: AtomicCondition::SelectedRoute {
             router,
             prefix,
             neighbor: Some(new_n),
-            weight: Some(PREF_WEIGHT),
-            next_hop: old_nh(info, router, prefix),
+            weight: Some(NEW_ROUTE_WEIGHT),
+            next_hop: Some(egress),
         },
-        postcondition: AtomicCondition::SelectedRoute {
-            router,
-            prefix,
-            neighbor: Some(new_n),
-            weight: Some(PREF_WEIGHT),
-            next_hop: old_nh(info, router, prefix),
-        },
+        postcondition: AtomicCondition::None,
     });
 }
 
@@ -900,7 +744,7 @@ fn cleanup_commands<Q>(
                     command: AtomicModifier::ClearPreference {
                         router: *r,
                         prefix: *p,
-                        raw: vec![Remove(prefer_route(*r, n, *p))],
+                        raw: vec![Remove(prefer_route(*r, n, *p, NEW_ROUTE_WEIGHT))],
                     },
                     precondition,
                     postcondition: AtomicCondition::None,

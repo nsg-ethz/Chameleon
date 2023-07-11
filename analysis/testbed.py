@@ -105,7 +105,7 @@ def write(root, filename, data):
 if __name__ == "__main__":
     path = select_measurement(prefix=("lab_baseline_", "lab_chameleon_", "lab_atomic_"))
 
-    if path.name.endswith("lab_baseline"):
+    if path.name.startswith("lab_baseline"):
         freq = FREQ_BASELINE
     else:
         freq = FREQ_CHAMELEON

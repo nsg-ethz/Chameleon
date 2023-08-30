@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.8301788.svg)](https://doi.org/10.5281/zenodo.8301788)
+
 # Chameleon: Taming the transient while reconfiguring BGP -- Sigcomm 2023
 
 This is the implementation of the paper “Taming the transient while reconfiguring BGP”, published at SIGCOMM ’23. Please cite the following article:

@@ -16,7 +16,7 @@ We split the artifact evaluation into two parts:
 
 The artifact evaluation requires you to setup a Docker container.
 This container has all dependencies included.
-To build that container, execute (this might take around 20 minutes):
+To build that container, execute (this might take around 20 minutes and requires around 5GB of storage):
 
 ```shell
 docker build -t chameleon .

@@ -21,8 +21,12 @@ RUN pip3 install plotly
 
 # install the toolchain for bgpsim-web
 RUN rustup target add wasm32-unknown-unknown
-RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash -
-RUN apt install -y nodejs
+RUN apt install -y ca-certificates curl gnupg
+RUN mkdir -p /etc/apt/keyrings
+RUN curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+RUN echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_16.x nodistro main"> /etc/apt/sources.list.d/nodesource.list
+# RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash -
+RUN apt install -y nodejs npm
 RUN npm install -g tailwindcss
 RUN cargo install trunk
 RUN cargo install --locked wasm-bindgen-cli

@@ -25,7 +25,7 @@ docker build -t chameleon .
 ## Evaluation
 
 In the evaluation, we run Chameleon's scheduler on many different topologies, scenarios, and specifications.
-We then compute different metrics like scheduling time, reconfiguraiton time, and memory overhead.
+We then compute different metrics like scheduling time, reconfiguration time, and memory overhead.
 While executing, the program always runs the runtime controller in the simulated network (BgpSim) to validate that the result is actually correct.
 
 ### Collecting the data
@@ -92,8 +92,8 @@ The json file has the following top-level objects:
       - `data.result.Success.max_routes_baseline`: Number of routes in any BGP table when reconfiguring the network using the baseline.
     - `data.num_variables` and `data.num_equations`: The size of the final ILP.
     - `data.model_steps`: Number of steps in the ILP model (should be equal to `data.result.Success.steps`)
-    - `data.fw_state_before`: The forwarding state before the reconfiguraiton.
-    - `data.fw_state_after`: The forwarding state after the reconfiguraiton.
+    - `data.fw_state_before`: The forwarding state before the reconfiguration.
+    - `data.fw_state_after`: The forwarding state after the reconfiguration.
 
 ### Data Processing
 
@@ -111,33 +111,37 @@ docker run -it -v $(pwd)/results:/chameleon/results chameleon python3 analysis/o
 ```
 
 In the following, we explain how to reproduce the plots from the paper:
-- **Figure 7**: Run the following script on the data set 1:
+- **Figure 7**: Run the following on the data set 1:
 
   ```shell
   docker run -it -v $(pwd)/results:/chameleon/results chameleon python3 analysis/plot_reconfiguration_complexity.py
-  firefox results/EXPERIMENT/plot_reconfiguration_complexity.html
   ```
 
-- **Figure 8**: Run the following script on the data set 1:
+  This will generate the figure: `results/EXPERIMENT/plot_reconfiguration_complexity.html`, where `EXPERIMENT` is the folder name of the data set 1.
+
+- **Figure 8**: Run the following on the data set 1:
 
   ```shell
-  docker run -it -v $(pwd)/results:/chameleon/results chameleon python3 analysis/plot_reconfiguration_complexity.py
-  firefox results/EXPERIMENT/plot_reconfiguration_complexity.html
+  docker run -it -v $(pwd)/results:/chameleon/results chameleon python3 analysis/plot_specification_complexity.py
   ```
+  
+  This will generate the figure: `results/EXPERIMENT/plot_specification_complexity.html`, where `EXPERIMENT` is the folder name of the data set 1. 
 
-- **Figure 9**: Run the following script on the data set 1:
+- **Figure 9**: Run the following on the data set 1:
 
   ```shell
   docker run -it -v $(pwd)/results:/chameleon/results chameleon python3 analysis/plot_reconfiguration_time.py
-  firefox results/EXPERIMENT/plot_reconfiguration_time.html
   ```
+  
+  This will generate the figure: `results/EXPERIMENT/plot_reconfiguration_time.html`, where `EXPERIMENT` is the folder name of the data set 1.
 
-- **Figure 12**: Run the following script on the data set 1:
+- **Figure 12**: Run the following on the data set 1:
 
   ```shell
   docker run -it -v $(pwd)/results:/chameleon/results chameleon python3 analysis/plot_routing_table_size.py
-  firefox results/EXPERIMENT/plot_routing_table_size.html
   ```
+  
+  This will generate the figure: `results/EXPERIMENT/plot_routing_table_size.html`, where `EXPERIMENT` is the folder name of the data set 1.
 
 - **Figure 13**: To replicate Figure 13, you need to re-compute the data set 2 with the binary for which explicit loop checking is disables.
   To do so, run the following command:
@@ -152,9 +156,9 @@ In the following, we explain how to reproduce the plots from the paper:
 
   ```shell
   docker run -it -v $(pwd)/results:/chameleon/results chameleon python3 analysis/plot_reconfiguration_complexity.py
-  firefox results/EXPERIMENT/plot_reconfiguration_complexity.html
   ```
 
+  This will generate the figure: `results/EXPERIMENT/plot_reconfiguration_complexity.html`, where `EXPERIMENT` is the folder name of the data set 2.
 
 ## Case Study
 
@@ -233,10 +237,11 @@ To process the data, run `analysis/testbed.py` (selecting the experiment that yo
 docker run -it -v $(pwd)/results:/chameleon/results chameleon python3 analysis/testbed.py
 ```
 
-This will then generate the file `/results/EXPERIMENT/throughput_per_egress.csv`.
+This will then generate the file `/results/EXPERIMENT/throughput_per_egress.csv`, where `EXPERIMENT` is the folder that stores the experiment results.
 To plot the results, execute:
 
 ```shell
 docker run -it -v $(pwd)/results:/chameleon/results chameleon python3 analysis/plot_testbed.py
-firefox results/EXPERIMENT/plot_testbed.html
 ```
+
+This will then create the plot as a HTML page: `results/EXPERIMENT/plot_testbed.html`, which you can open with any web browser.

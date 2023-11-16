@@ -8,6 +8,7 @@ WORKDIR /chameleon
 COPY . .
 
 # setup ssh
+RUN apt update
 RUN apt install -y ssh
 RUN mkdir -p /root/.ssh
 

@@ -135,7 +135,7 @@ In the following, we explain how to reproduce the plots from the paper:
   
   This will generate the figure: `results/EXPERIMENT/plot_reconfiguration_time.html`, where `EXPERIMENT` is the folder name of the data set 1.
 
-- **Figure 12**: Run the following on the data set 1:
+- **Figure 10**: Run the following on the data set 1:
 
   ```shell
   docker run -it -v $(pwd)/results:/chameleon/results chameleon python3 analysis/plot_routing_table_size.py
@@ -143,7 +143,7 @@ In the following, we explain how to reproduce the plots from the paper:
   
   This will generate the figure: `results/EXPERIMENT/plot_routing_table_size.html`, where `EXPERIMENT` is the folder name of the data set 1.
 
-- **Figure 13**: To replicate Figure 13, you need to re-compute the data set 2 with the binary for which explicit loop checking is disables.
+- **Figure 13**: To replicate Figure 13, you need to re-compute the data set 2 with the binary for which explicit loop checking is disabled.
   To do so, run the following command:
 
   ```shell
@@ -174,25 +174,25 @@ The main entry point is `src/main.rs`.
 - **Figure 1/6**: 
   - *Files*: `results/lab_baseline_abilene.tar.gz.tar.gz` and `results/lab_chameleon_abilene.tar.gz.tar.gz`
   - *command*: `docker run -it -e RUST_LOG=info chameleon main --topo=Abilene --spec=old-until-new-egress --event=del-best-route --lab --pecs=1024`
-- **Figure 10a**:
+- **Figure 11a**:
   - *Files*: `results/lab_chameleon_abilene_link_failure.tar.gz`
   - *command*: `docker run -it -e RUST_LOG=info chameleon main --topo=Abilene --spec=old-until-new-egress --event=del-best-route --failure=link-failure --lab --pecs=1024`
-- **Figure 10b**: 
+- **Figure 11b**:
   - *Files*: `results/lab_chameleon_abilene_new_best_route.tar.gz`
   - *command*: `docker run -it -e RUST_LOG=info chameleon main --topo=Abilene --spec=old-until-new-egress --event=del-best-route --failure=new-best-route --lab --pecs=1024`
-- **Figure 11a**: 
+- **Figure 12a**:
   - *Files*: `results/lab_baseline_compuserve.tar.gz` and `results/lab_chameleon_compuserve.tar.gz`
   - *command*: `docker run -it -e RUST_LOG=info chameleon main --topo=Compuserve --spec=old-until-new-egress --event=del-best-route --lab --pecs=1024`
-- **Figure 11b**: 
+- **Figure 12b**:
   - *Files*: `results/lab_baseline_hibernia_canada.tar.gz` and `results/lab_chameleon_hibernia_canada.tar.gz`
   - *command*: `docker run -it -e RUST_LOG=info chameleon main --topo=HiberniaCanada --spec=old-until-new-egress --event=del-best-route --lab --pecs=1024`
-- **Figure 11c**: 
+- **Figure 12c**:
   - *Files*: `results/lab_baseline_sprint.tar.gz` and `results/lab_chameleon_sprint.tar.gz`
   - *command*: `docker run -it -e RUST_LOG=info chameleon main --topo=Sprint --spec=old-until-new-egress --event=del-best-route --lab --pecs=1024`
-- **Figure 11d**: 
+- **Figure 12d**:
   - *Files*: `results/lab_baseline_jgn2plus.tar.gz` and `results/lab_chameleon_jgn2plus.tar.gz`
   - *command*: `docker run -it -e RUST_LOG=info chameleon main --topo=Jgn2Plus --spec=old-until-new-egress --event=del-best-route --lab --pecs=1024`
-- **Figure 11e**: 
+- **Figure 12e**:
   - *Files*: `results/lab_baseline_eenet.tar.gz` and `results/lab_chameleon_eenet.tar.gz`
   - *command*: `docker run -it -e RUST_LOG=info chameleon main --topo=Eenet --spec=old-until-new-egress --event=del-best-route --lab --pecs=1024`
   

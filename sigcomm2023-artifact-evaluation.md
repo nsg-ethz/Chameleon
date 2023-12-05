@@ -119,7 +119,7 @@ In the following, we explain how to reproduce the plots from the paper:
 
   This will generate the figure: `results/EXPERIMENT/plot_reconfiguration_complexity.html`, where `EXPERIMENT` is the folder name of the data set 1.
 
-- **Figure 8**: Run the following on the data set 1:
+- **Figure 8**: Run the following on the **data set 2**:
 
   ```shell
   docker run -it -v $(pwd)/results:/chameleon/results chameleon python3 analysis/plot_specification_complexity.py
